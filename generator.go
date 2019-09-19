@@ -1,4 +1,4 @@
-package main
+package generator
 
 import (
 	"encoding/json"
@@ -6,68 +6,119 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/golang/glog"
+	log "github.com/inconshreveable/log15"
 )
 
-const (
-	ABI = "abi"
-	BIN = "bytecode"
-)
+// GenerateCodeByConfigPath automatically generates go files for contract defined in truffle contracts.
+func GenerateCodeByConfigPath(configPath string) {
+	GenerateCodeByConfig(MustLoadConfig(configPath))
+}
 
-// Generate code
-func GenerateCode(path, name string, javaFlag, goFlag, delete bool) error {
+// GenerateCodeByConfig automatically generates go files for contract defined in truffle contracts.
+func GenerateCodeByConfig(config *Config) {
+
+	// generate bin and abi files.
+	for _, contract := range config.Contracts {
+		path := filepath.Join(config.TruffleProject, "build", "contracts", contract+".json")
+
+		generateABIAndBIN(path, contract)
+		defer Delete(getABI(contract))
+		defer Delete(getBIN(contract))
+
+		for _, lang := range config.DstLang {
+			generateCode(contract, lang)
+		}
+	}
+}
+
+func generateABIAndBIN(path, name string) error {
 	raw, err := Read(path)
 	if err != nil {
-		glog.Error("read file error:", err)
+		log.Error("read json file failed", "err", err, "file", path)
 		return err
 	}
 
 	var data map[string]interface{}
 	if err := json.Unmarshal(raw, &data); err != nil {
-		glog.Error("unmarshal data error:", err)
+		log.Error("json unmarshal failed", "err", err)
 		return err
 	}
 
-	abiRaw, err := json.Marshal(data[ABI])
-	binRaw, err := json.Marshal(data[BIN])
+	abiRaw, err := json.Marshal(data["abi"])
 	if err != nil {
-		panic(err)
+		return err
+	}
+
+	binRaw, err := json.Marshal(data["bin"])
+	if err != nil {
+		return err
 	}
 
 	// Trim ""
 	trimBin := []byte(strings.Trim(string(binRaw), "\""))
 
 	// Write abi and bin file
-	abiName := name + ".abi"
-	binName := name + ".bin"
-	// Ignore error.
-	Write(abiName, abiRaw)
-	Write(binName, trimBin)
 
-	// Generate go code.
-	if goFlag {
-		// Golang always lower.
-		outName := filepath.Join(Config.GoOutPut, strings.ToLower(name)+".go")
-		command := exec.Command(Config.ABIGenPath, "--bin", binName, "--abi", abiName, "--pkg", Config.GoPackage, "--out", outName)
-		if err = command.Run(); err != nil {
-			return err
-		}
+	abiName := getABI(name)
+	binName := getBIN(name)
+
+	if err := Write(abiName, abiRaw); err != nil {
+		return err
+	}
+	return Write(binName, trimBin)
+}
+
+func generateCode(contract string, lang Lang) {
+	var commandString []string
+	switch lang.Name {
+	case "java":
+		commandString = getJavaCommand(getBIN(contract), getABI(contract), lang.Package, lang.Output)
+	case "go":
+		commandString = getGoCommand(getBIN(contract), getABI(contract), lang.Package, filepath.Join(lang.Output, getGoName(contract)))
+	default:
+		panic("not support")
 	}
 
-	// Generate java code.
-	if javaFlag {
-		command := exec.Command(Config.Web3jPath, "solidity", "generate", binName, abiName, "-p", Config.JavaPackage, "-o", Config.JavaOutput)
-		if err = command.Run(); err != nil {
-			return err
-		}
+	command := exec.Command(lang.Tool, commandString...)
+	if err := command.Run(); err != nil {
+		log.Error("generate code failed", "lang", lang.Name, "err", err)
 	}
+}
 
-	// Delete tmp abi/bin files.
-	if delete {
-		// Ignore error.
-		Delete(abiName)
-		Delete(binName)
+func getBIN(contract string) string {
+	return strings.ToLower(contract) + ".bin"
+}
+
+func getABI(contract string) string {
+	return strings.ToLower(contract) + ".abi"
+}
+
+func getGoName(contract string) string {
+	return strings.ToLower(contract) + ".go"
+}
+
+func getGoCommand(binName, abiName, packageName, dst string) []string {
+	return []string{
+		"--bin",
+		binName,
+		"--abi",
+		abiName,
+		"--pkg",
+		packageName,
+		"--out",
+		dst,
 	}
+}
 
-	return nil
+func getJavaCommand(binName, abiName, packageName, dst string) []string {
+	return []string{
+		"solidity",
+		"generate",
+		binName,
+		abiName,
+		"-p",
+		packageName,
+		"-o",
+		dst,
+	}
 }

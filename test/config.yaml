@@ -1,0 +1,18 @@
+truffleProject: "truffle"
+
+contracts:
+  - "contract1"
+  - "contract2"
+
+dstLang:
+  -
+    name: "go"
+    tool: "abigen"
+    output: "go"
+    package: "gopackage"
+  
+  -
+    name: "java"
+    tool: "web3j"
+    output: "java"
+    package: "javapackage"
