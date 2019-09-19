@@ -11,26 +11,22 @@ truffle compile
 # 使用方法
 在main文件中设置好相关配置：
 ```go
-var Config = GenConfig{
-    // truffle项目位置
-	TruffleProjectPath: "",
-	// abigen工具位置
-	ABIGenPath:         "/home/ubuntu/gopath/src/github.com/ethereum/go-ethereum/build/bin/abigen",
-	// web3j工具位置
-	Web3jPath:          "/home/ubuntu/web3j-3.6.0/bin/web3j",
-	// java输出目录
-	JavaOutput:         "./",
-	// go输出目录
-	GoOutPut:           "./",
-	// java包名称
-	JavaPackage:        "o",
-	// go包名称（go文件名称会转为小写）
-	GoPackage:          "o",
-}
-
-// 文件名字未填写在这的代码不会生成
-var FilesFilter = map[string]bool{
-	"AccessControl": true,
+var Config = Config{
+        // truffle项目位置
+	TruffleProject: "",
+	// 需要生成的合约名称
+	Contracts []string
+	// 对应的语言
+	DstLang []{
+		// 语言名称
+		Name
+		// 工具路径
+		Tool
+		// 输出文件夹
+		Output
+		// 输出文件所在package
+		Package
+	},
 }
 ```
 
