@@ -49,7 +49,7 @@ func generateABIAndBIN(path, name string) error {
 		return err
 	}
 
-	binRaw, err := json.Marshal(data["bin"])
+	binRaw, err := json.Marshal(data["bytecode"])
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func generateCode(contract string, lang Lang) {
 	case "java":
 		commandString = getJavaCommand(getBIN(contract), getABI(contract), lang.Package, lang.Output)
 	case "go":
-		commandString = getGoCommand(getBIN(contract), getABI(contract), lang.Package, filepath.Join(lang.Output, getGoName(contract)))
+		commandString = getGoCommand(getBIN(contract), getABI(contract), lang.Package, filepath.Join(lang.Output, getGoName(contract)), contract)
 	default:
 		panic("not support")
 	}
@@ -97,7 +97,7 @@ func getGoName(contract string) string {
 	return strings.ToLower(contract) + ".go"
 }
 
-func getGoCommand(binName, abiName, packageName, dst string) []string {
+func getGoCommand(binName, abiName, packageName, dst, contract string) []string {
 	return []string{
 		"--bin",
 		binName,
@@ -107,6 +107,8 @@ func getGoCommand(binName, abiName, packageName, dst string) []string {
 		packageName,
 		"--out",
 		dst,
+		"--type",
+		contract,
 	}
 }
 
