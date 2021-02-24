@@ -11,8 +11,8 @@ import (
 )
 
 // GenerateCodeByConfigPath automatically generates go files for contract defined in truffle contracts.
-func GenerateCodeByConfigPath(configPath string) {
-	GenerateCodeByConfig(MustLoadConfig(configPath))
+func GenerateCodeByConfigPath(configPath string) error {
+	return GenerateCodeByConfig(MustLoadConfig(configPath))
 }
 
 // GenerateCodeByConfig automatically generates go files for contract defined in truffle contracts.
