@@ -8,31 +8,21 @@ import (
 
 const truffleBuild = "build/contracts"
 
-// Config contains all necessary info to generate go/java code by truffle compiled json files.
+// Config contains all necessary info to generate go code using truffle compiled json files.
 type Config struct {
-	// Path of truffle project.
-	TruffleProject string
+	// path of abigen tool.
+	AbigenPath string `yaml:"abigenPath"`
 
-	// Destination language.
-	DstLang []Lang
+	// Path of truffle project.
+	TruffleProjectPath string `yaml:"truffleProjectPath"`
+
+	// Project name, also used as pkg name.
+	Name string `yaml:"name"`
+
+	OutDir string `yaml:"outDir"`
 
 	// contracts.
-	Contracts []string
-}
-
-// Lang is the language of output dst from .sol.
-type Lang struct {
-	// Name of lang.
-	Name string
-
-	// path of tool to generate language code.
-	Tool string
-
-	// path of output.
-	Output string
-
-	// package name.
-	Package string
+	Contracts []string `yaml:"contracts"`
 }
 
 // MustLoadConfig loads config and panic if err.

@@ -1,18 +1,7 @@
-truffleProject: "truffle"
-
+abigenPath: "abigenPath"
+truffleProjectPath: "truffle"
+name: "name"
+outDir: "outDir"
 contracts:
   - "contract1"
   - "contract2"
-
-dstLang:
-  -
-    name: "go"
-    tool: "abigen"
-    output: "go"
-    package: "gopackage"
-  
-  -
-    name: "java"
-    tool: "web3j"
-    output: "java"
-    package: "javapackage"

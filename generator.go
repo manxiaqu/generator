@@ -2,6 +2,7 @@ package generator
 
 import (
 	"encoding/json"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -19,15 +20,14 @@ func GenerateCodeByConfig(config *Config) {
 
 	// generate bin and abi files.
 	for _, contract := range config.Contracts {
-		path := filepath.Join(config.TruffleProject, "build", "contracts", contract+".json")
+		path := filepath.Join(config.TruffleProjectPath, "build", "contracts", contract+".json")
 
+		// TODO: check error
 		generateABIAndBIN(path, contract)
 		defer Delete(getABI(contract))
 		defer Delete(getBIN(contract))
 
-		for _, lang := range config.DstLang {
-			generateCode(contract, lang)
-		}
+		generateCode(contract, config)
 	}
 }
 
@@ -68,20 +68,17 @@ func generateABIAndBIN(path, name string) error {
 	return Write(binName, trimBin)
 }
 
-func generateCode(contract string, lang Lang) {
-	var commandString []string
-	switch lang.Name {
-	case "java":
-		commandString = getJavaCommand(getBIN(contract), getABI(contract), lang.Package, lang.Output)
-	case "go":
-		commandString = getGoCommand(getBIN(contract), getABI(contract), lang.Package, filepath.Join(lang.Output, getGoName(contract)), contract)
-	default:
-		panic("not support")
-	}
+func generateCode(contract string, config *Config) {
+	// try to create out dir
+	pkg := strings.ToLower(config.Name)
+	outDir := filepath.Join(config.OutDir, pkg)
+	os.MkdirAll(config.OutDir, os.ModePerm)
 
-	command := exec.Command(lang.Tool, commandString...)
+	commandString := getGoCommand(getBIN(contract), getABI(contract), pkg, filepath.Join(outDir, getGoName(contract)), contract)
+
+	command := exec.Command(config.AbigenPath, commandString...)
 	if err := command.Run(); err != nil {
-		log.Error("generate code failed", "lang", lang.Name, "err", err)
+		log.Error("generate code failed", "err", err)
 	}
 }
 
@@ -109,18 +106,5 @@ func getGoCommand(binName, abiName, packageName, dst, contract string) []string 
 		dst,
 		"--type",
 		contract,
-	}
-}
-
-func getJavaCommand(binName, abiName, packageName, dst string) []string {
-	return []string{
-		"solidity",
-		"generate",
-		binName,
-		abiName,
-		"-p",
-		packageName,
-		"-o",
-		dst,
 	}
 }
