@@ -16,19 +16,25 @@ func GenerateCodeByConfigPath(configPath string) {
 }
 
 // GenerateCodeByConfig automatically generates go files for contract defined in truffle contracts.
-func GenerateCodeByConfig(config *Config) {
+func GenerateCodeByConfig(config *Config) error {
 
 	// generate bin and abi files.
 	for _, contract := range config.Contracts {
 		path := filepath.Join(config.TruffleProjectPath, "build", "contracts", contract+".json")
 
-		// TODO: check error
-		generateABIAndBIN(path, contract)
 		defer Delete(getABI(contract))
 		defer Delete(getBIN(contract))
 
-		generateCode(contract, config)
+		if err := generateABIAndBIN(path, contract); err != nil {
+			return err
+		}
+
+		if err := generateCode(contract, config); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 func generateABIAndBIN(path, name string) error {
@@ -68,18 +74,21 @@ func generateABIAndBIN(path, name string) error {
 	return Write(binName, trimBin)
 }
 
-func generateCode(contract string, config *Config) {
+func generateCode(contract string, config *Config) error {
 	// try to create out dir
 	pkg := strings.ToLower(config.Name)
-	outDir := filepath.Join(config.OutDir, pkg)
+
 	os.MkdirAll(config.OutDir, os.ModePerm)
 
-	commandString := getGoCommand(getBIN(contract), getABI(contract), pkg, filepath.Join(outDir, getGoName(contract)), contract)
+	commandString := getGoCommand(getBIN(contract), getABI(contract), pkg, filepath.Join(config.OutDir, getGoName(contract)), contract)
 
 	command := exec.Command(config.AbigenPath, commandString...)
 	if err := command.Run(); err != nil {
-		log.Error("generate code failed", "err", err)
+		log.Error("generate code failed", "err", err, "cmd", command.String())
+		return err
 	}
+
+	return nil
 }
 
 func getBIN(contract string) string {

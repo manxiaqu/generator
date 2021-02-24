@@ -19,6 +19,7 @@ type Config struct {
 	// Project name, also used as pkg name.
 	Name string `yaml:"name"`
 
+	// dir generated code located in.
 	OutDir string `yaml:"outDir"`
 
 	// contracts.
